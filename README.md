@@ -1,5 +1,6 @@
 # excel-tools
 Excel Tools using python, pandas and numpy
+Also requires xlrd, openpyxl, jinja2 and pyqt5
 
 This python tool takes two csv or xlsx files as input and
 
