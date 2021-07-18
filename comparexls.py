@@ -124,6 +124,31 @@ def compare_excel(
             data.to_excel(writer, engine='openpyxl',sheet_name=sname)
     print(f"Differences saved in {out_path}")
 
+def merge_excel(
+        path1, sheet1, path2, sheet2, out_path, index_col_name, **kwargs
+):
+    p1 = path1.split('.')
+    p2 = path2.split('.')
+    if (p1[1] == 'csv'):
+        old_df = pd.read_csv(path1, **kwargs)
+    else:
+        old_df = pd.read_excel(path1, sheet_name=sheet1, **kwargs)
+
+    if (p2[1] == 'csv'):
+        new_df = pd.read_csv(path2, **kwargs)
+    else:
+        new_df = pd.read_excel(path2, sheet_name=sheet2, **kwargs)
+
+    combpd= pd.merge(old_df, new_df, on=index_col_name, how='outer')
+    out_data = {
+        'merged rows': combpd
+    }
+
+    with pd.ExcelWriter(out_path) as writer:
+        for sname, data in out_data.items():
+            data.to_excel(writer, engine='openpyxl',sheet_name=sname)
+    print(f"Combined saved in {out_path}")
+
 def build_parser():
     cfg = argparse.ArgumentParser(
         description="Compares two excel files and outputs the differences "
@@ -142,6 +167,8 @@ def build_parser():
     )
     cfg.add_argument("-o", "--output-path", default="compared.xlsx",
                      help="Path of the comparison results")
+    cfg.add_argument("-m", "--merge-path", default="merged.xlsx",
+                     help="Path of the merged results")
     cfg.add_argument("--skiprows", help='number of rows to skip', type=int,
                      action='append', default=None)
     return cfg
@@ -152,7 +179,8 @@ def main():
     opt = cfg.parse_args()
     compare_excel(opt.path1, opt.sheet1, opt.path2, opt.sheet2, opt.output_path,
                   opt.key_column, skiprows=opt.skiprows)
-
+    merge_excel(opt.path1, opt.sheet1, opt.path2, opt.sheet2, opt.merge_path,
+                  opt.key_column, skiprows=opt.skiprows)
 
 if __name__ == '__main__':
     main()
