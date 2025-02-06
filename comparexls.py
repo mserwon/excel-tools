@@ -27,6 +27,8 @@ def strip(x):
     """Function to use with applymap to strip whitespaces in a dataframe."""
     return x.strip() if isinstance(x, str) else x
 
+def gen_col_type(num_keys):
+    return {i: str for i in range(num_keys)}
 
 def diff_pd(old_df, new_df, idx_col):
     """Identify differences between two pandas DataFrames using a key column.
@@ -44,6 +46,7 @@ def diff_pd(old_df, new_df, idx_col):
 
     # get the added and removed rows
     old_keys = old_df.index
+    #old_keys[:] = [item if item != nan else '' for item in old_keys]
     new_keys = new_df.index
     if isinstance(old_keys, pd.MultiIndex):
         removed_keys = old_keys.difference(new_keys)
@@ -102,21 +105,32 @@ def diff_pd(old_df, new_df, idx_col):
 
     return out_data
 
+def gen_col_type(num_keys):
+    return {i: 'str' for i in range(num_keys)}
 
 def compare_excel(
         path1, sheet1, path2, sheet2, out_path, index_col_name, **kwargs
 ):
+    #clmtype = {0: str, 1: str, 2: str, 3: str}
+    clmtype = {0: str, 1: str, 2: str, 3: str, 4: str, 5: str, 6: str, 7: str}
+    clmtype = gen_col_type(32)
     p1 = path1.split('.')
     p2 = path2.split('.')
     if (p1[1] == 'csv'):
-        old_df = pd.read_csv(path1, **kwargs)
+        old_df = pd.read_csv(path1, dtype = str)
+        old_df = old_df.fillna('')
+        old_df = old_df.applymap(str)
     else:
-        old_df = pd.read_excel(path1, sheet_name=sheet1, **kwargs)
+        old_df = pd.read_excel(path1, sheet_name=sheet1, dtype = clmtype, **kwargs)
+        old_df = old_df.fillna('')
 
     if (p2[1] == 'csv'):
-        new_df = pd.read_csv(path2, **kwargs)
+        new_df = pd.read_csv(path2, dtype = 'str')
+        new_df = new_df.fillna('')
+        new_df = new_df.applymap(str)
     else:
-        new_df = pd.read_excel(path2, sheet_name=sheet2, **kwargs)
+        new_df = pd.read_excel(path2, sheet_name=sheet2, dtype = clmtype, **kwargs)
+        new_df = new_df.fillna('')
 
     diff = diff_pd(old_df, new_df, index_col_name)
     with pd.ExcelWriter(out_path) as writer:
@@ -131,13 +145,17 @@ def merge_excel(
     p2 = path2.split('.')
     if (p1[1] == 'csv'):
         old_df = pd.read_csv(path1, **kwargs)
+        old_df = old_df.applymap(str)
     else:
         old_df = pd.read_excel(path1, sheet_name=sheet1, **kwargs)
+        old_df = old_df.applymap(str)
 
     if (p2[1] == 'csv'):
         new_df = pd.read_csv(path2, **kwargs)
+        new_df = new_df.applymap(str)
     else:
         new_df = pd.read_excel(path2, sheet_name=sheet2, **kwargs)
+        new_df = new_df.applymap(str)
 
     combpd= pd.merge(old_df, new_df, on=index_col_name, how='outer')
     out_data = {
@@ -158,13 +176,10 @@ def build_parser():
     cfg.add_argument("sheet1", help="Name 1st excel sheet to compare.")
     cfg.add_argument("path2", help="Second excel file")
     cfg.add_argument("sheet2", help="Name 2nd excel sheet to compare.")
-    cfg.add_argument(
-        "key_column",
+    cfg.add_argument("-k","--key_column", nargs="+",
         help="Name of the column(s) with unique row identifier. It has to be "
              "the actual text of the first row, not the excel notation."
-             "Use multiple times to create a composite index.",
-        nargs="+",
-    )
+             "Use multiple times to create a composite index.")
     cfg.add_argument("-o", "--output-path", default="compared.xlsx",
                      help="Path of the comparison results")
     cfg.add_argument("-m", "--merge-path", default="merged.xlsx",
@@ -177,6 +192,8 @@ def build_parser():
 def main():
     cfg = build_parser()
     opt = cfg.parse_args()
+    print(opt.key_column)
+    #opt.key_column = ["TRANSLATION PATTERN", "ROUTE PARTITION"]
     compare_excel(opt.path1, opt.sheet1, opt.path2, opt.sheet2, opt.output_path,
                   opt.key_column, skiprows=opt.skiprows)
     merge_excel(opt.path1, opt.sheet1, opt.path2, opt.sheet2, opt.merge_path,

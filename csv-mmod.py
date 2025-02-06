@@ -62,20 +62,14 @@ def main():
     cfg = build_parser()
     opt = cfg.parse_args()
     # Using readlines()
-    file1 = open(opt.path1, 'r')
-    file2 = open(opt.path2, 'r')
-    file3 = open(opt.path3, 'w')
+    odata=pd.read_csv(opt.path1)
+    moddata=pd.read_excel(opt.path2)
     #treat header line differently
-    newline = file1.readline()
-    file3.writelines(newline)
-    file1 = open(opt.path1, 'r')
-    lines = file1.readlines()[1:]
+    mdata = moddata.merge(odata, on='Device Name', how='left')
+    #file1 = open(opt.path3, 'r')
     # interate through the rest of the lines
-    for index, line in enumerate(lines):
-        change_line(line,file3)
-    file1.close()
-    file2.close()
-    file3.close()
+    mdata.to_csv('phones-2nd.csv')
+    print('Done with merge.')
 
 if __name__ == '__main__':
     main()
